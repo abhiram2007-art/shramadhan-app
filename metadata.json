@@ -1,0 +1,6 @@
+{
+  "name": "Shramadhan",
+  "description": "Every Farmer Deserves the Right Decision, Not Just the Right Price. AI-powered agronomic decision advisor, price forecaster, logistics pooler, and sourcing portal.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

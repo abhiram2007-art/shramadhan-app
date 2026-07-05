@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Catch-all Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helper primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn(); // Let logged-in users read profiles to connect farmers and mediators
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data) && (
+        // Protect role immutability
+        request.resource.data.role == resource.data.role
+      );
+      allow delete: if false; // Profiles cannot be deleted client-side for demo integrity
+
+      // Validation Helper for User Profiles
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'name', 'mobile', 'role', 'state', 'district', 'village', 'language'])
+          && data.uid == request.auth.uid
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 128
+          && data.email is string && data.email.size() > 0 && data.email.size() <= 128
+          && data.mobile is string && data.mobile.size() >= 10 && data.mobile.size() <= 15
+          && data.role in ['Farmer', 'Mediator']
+          && data.language in ['en', 'hi', 'te'];
+      }
+
+      // Crop logs sub-collection for Farmers
+      match /cropGrowthLogs/{logId} {
+        allow read: if isSignedIn(); // Mediators can read crop growth logs to inspect quality!
+        allow create, update: if isSignedIn() && isOwner(userId) && isValidCropLog(request.resource.data);
+        allow delete: if isSignedIn() && isOwner(userId);
+
+        function isValidCropLog(data) {
+          return data.keys().hasAll(['id', 'farmerId', 'cropName', 'stage', 'imageUrl', 'timestamp'])
+            && data.id == logId
+            && data.farmerId == userId
+            && data.cropName is string && data.cropName.size() > 0
+            && data.stage is string && data.stage.size() > 0
+            && data.imageUrl is string && data.imageUrl.size() > 0;
+        }
+      }
+    }
+
+    // 2. Transactions collection
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (
+        resource.data.farmerId == request.auth.uid || 
+        resource.data.mediatorId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidTransaction(request.resource.data) && (
+        request.resource.data.farmerId == request.auth.uid || 
+        request.resource.data.mediatorId == request.auth.uid
+      );
+      allow update: if isSignedIn() && isValidTransaction(request.resource.data) && (
+        resource.data.farmerId == request.auth.uid || 
+        resource.data.mediatorId == request.auth.uid
+      ) && (
+        // Restrict state transition fields (e.g. status)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+      );
+      allow delete: if false;
+
+      function isValidTransaction(data) {
+        return data.keys().hasAll(['id', 'farmerId', 'mediatorId', 'cropName', 'quantity', 'price', 'totalAmount', 'status'])
+          && data.id == transactionId
+          && data.quantity is number && data.quantity > 0
+          && data.price is number && data.price > 0
+          && data.totalAmount is number && data.totalAmount > 0
+          && data.status in ['Completed', 'Pending', 'Cancelled'];
+      }
+    }
+
+    // 3. Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn(); // Broadcast model, but lets users filter client-side
+      allow create: if false; // System generated only (via API)
+      allow update: if isSignedIn() && (
+        // Farmers/mediators can mark read
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+      );
+      allow delete: if false;
+    }
+  }
+}

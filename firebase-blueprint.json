@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Unified profile for Farmers and Mediators",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "mobile": { "type": "string" },
+        "role": { "type": "string", "enum": ["Farmer", "Mediator"] },
+        "state": { "type": "string" },
+        "district": { "type": "string" },
+        "village": { "type": "string" },
+        "language": { "type": "string", "enum": ["en", "hi", "te"] },
+        "totalLand": { "type": "number" },
+        "soilType": { "type": "string" },
+        "waterSource": { "type": "string" },
+        "irrigationType": { "type": "string" },
+        "gpsLocation": { "type": "object" },
+        "cropDetails": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "name", "mobile", "role", "state", "district", "village", "language"]
+    },
+    "CropGrowthLog": {
+      "title": "CropGrowthLog",
+      "description": "Visual ledger logging and diagnostics for growth stages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "cropName": { "type": "string" },
+        "stage": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "notes": { "type": "string" },
+        "healthScore": { "type": "number" },
+        "pestRisk": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "aiDirectives": { "type": "array" }
+      },
+      "required": ["id", "farmerId", "cropName", "stage", "imageUrl", "timestamp"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Procurement and purchasing agreements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "mediatorId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "mediatorName": { "type": "string" },
+        "cropName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["Completed", "Pending", "Cancelled"] }
+      },
+      "required": ["id", "farmerId", "mediatorId", "cropName", "quantity", "price", "totalAmount", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Targeted bulletins, alerts, and market reminders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "category": { "type": "string", "enum": ["price", "scheme", "weather", "logistics", "system"] },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "title", "message", "timestamp", "category", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores digital profiles for farmers and mediators"
+    },
+    "/users/{userId}/cropGrowthLogs/{logId}": {
+      "schema": "CropGrowthLog",
+      "description": "Visual diaries and AI crop disease assessments"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Procurement agreements completed on the marketplace"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Localized bulletins and notifications"
+    }
+  }
+}
